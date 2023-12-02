@@ -43,6 +43,9 @@
 
 #include "grid_display.h"
 
+#include <rviz/view_manager.h>
+#include <rviz/default_plugin/view_controllers/fixed_orientation_ortho_view_controller.h>
+
 namespace rviz
 {
 GridDisplay::GridDisplay() : Display()
@@ -146,6 +149,37 @@ void GridDisplay::update(float /*dt*/, float /*ros_dt*/)
       setStatus(StatusProperty::Error, "Transform",
                 "Could not transform from [" + qframe + "] to [" + fixed_frame_ + "]");
     }
+  }
+
+  if (scene_manager_->getCurrentViewport())
+  {
+    if (FixedOrientationOrthoViewController* vc =
+            qobject_cast<FixedOrientationOrthoViewController*>(context_->getViewManager()->getCurrent()))
+    {
+      auto* vp = scene_manager_->getCurrentViewport();
+      // 实际像素宽度
+      float act_width = vp->getActualWidth();
+      float act_height = vp->getActualHeight();
+      float act_top = vp->getActualTop();
+      float act_left = vp->getActualLeft();
+      auto mat = vp->getCamera()->getViewMatrix();
+      auto pos = vp->getCamera()->getPosition();
+      auto rea_pos = vp->getCamera()->getRealPosition();
+      double xx = mat[0][3], yy = mat[1][3], zz = mat[2][3];
+      // scale
+      float scale = vc->getScale();
+      ROS_INFO("act_width=%lf act_height=%lf scale = %lf top = %lf left = %lf, ", act_width, act_height, scale, act_top, act_left);
+      ROS_INFO("xx=%lf yy=%lf zz = %lf", xx, yy, zz);
+      std::cout << "pos = " << pos <<"\n";
+      std::cout << "rea_pos = " << rea_pos <<"\n";
+      float cell_size = (act_width >= act_height ? act_width / scale : act_height / scale);
+      if (cell_size != cell_count_property_->getInt())
+      {
+        cell_count_property_->setInt(cell_size);
+      }
+    }
+
+    // ROS_INFO("width=%lf height=%lf scale=%lf", width,height,scale);
   }
 }
 

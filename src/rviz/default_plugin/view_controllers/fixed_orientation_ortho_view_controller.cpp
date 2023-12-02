@@ -58,6 +58,12 @@ FixedOrientationOrthoViewController::~FixedOrientationOrthoViewController()
 {
 }
 
+float FixedOrientationOrthoViewController::getScale() const
+{
+  return scale_property_->getFloat();
+}
+
+
 void FixedOrientationOrthoViewController::onInitialize()
 {
   FramePositionTrackingViewController::onInitialize();
@@ -196,6 +202,9 @@ void FixedOrientationOrthoViewController::updateCamera()
   float height = camera_->getViewport()->getActualHeight();
 
   float scale = scale_property_->getFloat();
+
+  // ROS_INFO("width=%lf height=%lf scale=%lf", width,height,scale);
+
   Ogre::Matrix4 proj;
   buildScaledOrthoMatrix(proj, -width / scale / 2, width / scale / 2, -height / scale / 2,
                          height / scale / 2, camera_->getNearClipDistance(),

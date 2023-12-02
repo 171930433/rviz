@@ -64,6 +64,8 @@ public:
 
   void update(float dt, float ros_dt) override;
 
+  float getScale() const;
+
 protected:
   void onTargetFrameChanged(const Ogre::Vector3& old_reference_position,
                             const Ogre::Quaternion& old_reference_orientation) override;
