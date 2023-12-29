@@ -114,7 +114,7 @@ VisualizationFrame::VisualizationFrame(QWidget* parent)
   , app_(nullptr)
   , render_panel_(nullptr)
   , show_help_action_(nullptr)
-  , preferences_(new Preferences())
+  , preferences_(new Preferences()) // 建议关闭时保存配置文件的偏好
   , file_menu_(nullptr)
   , recent_configs_menu_(nullptr)
   , toolbar_(nullptr)
@@ -125,35 +125,42 @@ VisualizationFrame::VisualizationFrame(QWidget* parent)
   , add_tool_action_(nullptr)
   , remove_tool_menu_(nullptr)
   , initialized_(false)
-  , geom_change_detector_(new WidgetGeometryChangeDetector(this))
+  , geom_change_detector_(new WidgetGeometryChangeDetector(this)) // move或者resize会触发 VisualizationFrame modified
   , loading_(false)
   , post_load_timer_(new QTimer(this))
   , frame_count_(0)
   , toolbar_visible_(true)
 {
-  panel_factory_ = new PanelFactory();
+  panel_factory_ = new PanelFactory();  // PanelFactory默认构造，准备构造pannel的信息，对象尚未创建
 
+   // move或者resize会触发 VisualizationFrame modified
   installEventFilter(geom_change_detector_);
-  connect(geom_change_detector_, SIGNAL(changed()), this, SLOT(setDisplayConfigModified()));
+  connect(geom_change_detector_, SIGNAL(changed()), this, SLOT(setDisplayConfigModified())); 
 
+  // 延迟1秒执行一次markLoadingDone
   post_load_timer_->setSingleShot(true);
   connect(post_load_timer_, SIGNAL(timeout()), this, SLOT(markLoadingDone()));
 
-  package_path_ = ros::package::getPath("rviz");
+  // 帮助和载入时的logo
+  package_path_ = ros::package::getPath("rviz");  // 获得rviz包的安装目录，默认为/opt/ros/melodic/share/rviz
   help_path_ = QString::fromStdString((fs::path(package_path_) / "help/help.html").BOOST_FILE_STRING());
+  // 启动画面路径
   splash_path_ =
       QString::fromStdString((fs::path(package_path_) / "images/splash.png").BOOST_FILE_STRING());
 
+  // reset按钮
   QToolButton* reset_button = new QToolButton();
   reset_button->setText("Reset");
   reset_button->setContentsMargins(0, 0, 0, 0);
   statusBar()->addPermanentWidget(reset_button, 0);
-  connect(reset_button, SIGNAL(clicked(bool)), this, SLOT(reset()));
+  connect(reset_button, SIGNAL(clicked(bool)), this, SLOT(reset()));  // 使得manager_时间重置
 
+  // reset 右侧的状态提示label， 绑定statusUpdate消息
   status_label_ = new QLabel("");
   statusBar()->addPermanentWidget(status_label_, 1);
   connect(this, SIGNAL(statusUpdate(const QString&)), status_label_, SLOT(setText(const QString&)));
 
+  // fps计算
   fps_label_ = new QLabel("");
   fps_label_->setMinimumWidth(40);
   fps_label_->setAlignment(Qt::AlignRight);
@@ -249,22 +256,22 @@ void VisualizationFrame::setSplashPath(const QString& splash_path)
 
 void VisualizationFrame::initialize(const QString& display_config_file)
 {
-  initConfigs();
+  initConfigs();  // 创建 ~/.rviz 目录
 
-  loadPersistentSettings();
+  loadPersistentSettings(); // 读取最近的.rviz配置以及最近的rviz配置
 
   QIcon app_icon(
       QString::fromStdString((fs::path(package_path_) / "icons/package.png").BOOST_FILE_STRING()));
-  setWindowIcon(app_icon);
+  setWindowIcon(app_icon);    // 任务栏的icon载入与set
 
   if (splash_path_ != "")
   {
     QPixmap splash_image(splash_path_);
-    splash_ = new SplashScreen(splash_image);
+    splash_ = new SplashScreen(splash_image); // 启动窗口
     splash_->show();
     connect(this, SIGNAL(statusUpdate(const QString&)), splash_, SLOT(showMessage(const QString&)));
   }
-  Q_EMIT statusUpdate("Initializing");
+  Q_EMIT statusUpdate("Initializing");  // 启动窗口的左下角显示loading
 
   // Periodically process events for the splash screen.
   // See: http://doc.qt.io/qt-5/qsplashscreen.html#details
@@ -286,7 +293,7 @@ void VisualizationFrame::initialize(const QString& display_config_file)
   central_layout->setSpacing(0);
   central_layout->setMargin(0);
 
-  render_panel_ = new RenderPanel(central_widget);
+  render_panel_ = new RenderPanel(central_widget);  // render_panel_ 为 central_widget
 
   hide_left_dock_button_ = new QToolButton();
   hide_left_dock_button_->setContentsMargins(0, 0, 0, 0);
@@ -308,6 +315,7 @@ void VisualizationFrame::initialize(const QString& display_config_file)
 
   connect(hide_right_dock_button_, SIGNAL(toggled(bool)), this, SLOT(hideRightDock(bool)));
 
+  // !左关闭按钮 renderpanel 右关闭按钮
   central_layout->addWidget(hide_left_dock_button_, 0);
   central_layout->addWidget(render_panel_, 1);
   central_layout->addWidget(hide_right_dock_button_, 0);
@@ -318,33 +326,33 @@ void VisualizationFrame::initialize(const QString& display_config_file)
   if (app_)
     app_->processEvents();
 
-  initMenus();
+  initMenus();  // 创建菜单栏部分
 
   // Periodically process events for the splash screen.
   if (app_)
     app_->processEvents();
 
-  initToolbars();
+  initToolbars(); // 工具栏部分的创建
 
   // Periodically process events for the splash screen.
   if (app_)
     app_->processEvents();
 
-  setCentralWidget(central_widget);
+  setCentralWidget(central_widget); // !setCentralWidget
 
   // Periodically process events for the splash screen.
   if (app_)
     app_->processEvents();
 
-  manager_ = new VisualizationManager(render_panel_, this);
+  manager_ = new VisualizationManager(render_panel_, this); //todo 构造VisualizationManager(render_panel_,visualization_frame)
   manager_->setHelpPath(help_path_);
-  connect(manager_, SIGNAL(escapePressed()), this, SLOT(exitFullScreen()));
+  connect(manager_, SIGNAL(escapePressed()), this, SLOT(exitFullScreen())); // render_panel_最大化的情况下，escape退出全屏
 
   // Periodically process events for the splash screen.
   if (app_)
     app_->processEvents();
 
-  render_panel_->initialize(manager_->getSceneManager(), manager_);
+  render_panel_->initialize(manager_->getSceneManager(), manager_); // render_panel_()
 
   // Periodically process events for the splash screen.
   if (app_)
@@ -352,6 +360,7 @@ void VisualizationFrame::initialize(const QString& display_config_file)
 
   ToolManager* tool_man = manager_->getToolManager();
 
+  // VisualizationManager 的 configChanged，会调用所有主窗口的重绘
   connect(manager_, SIGNAL(configChanged()), this, SLOT(setDisplayConfigModified()));
   connect(tool_man, SIGNAL(toolAdded(Tool*)), this, SLOT(addTool(Tool*)));
   connect(tool_man, SIGNAL(toolRemoved(Tool*)), this, SLOT(removeTool(Tool*)));
@@ -390,8 +399,9 @@ void VisualizationFrame::initialize(const QString& display_config_file)
 
 void VisualizationFrame::initConfigs()
 {
+  // 得到当前home目录 ~
   home_dir_ = QDir::toNativeSeparators(QDir::homePath()).toStdString();
-
+  // ~/.rviz 目录
   config_dir_ = (fs::path(home_dir_) / ".rviz").BOOST_FILE_STRING();
   persistent_settings_file_ = (fs::path(config_dir_) / "persistent_settings").BOOST_FILE_STRING();
   default_display_config_file_ =
@@ -415,7 +425,7 @@ void VisualizationFrame::loadPersistentSettings()
 {
   YamlConfigReader reader;
   Config config;
-  reader.readFile(config, QString::fromStdString(persistent_settings_file_));
+  reader.readFile(config, QString::fromStdString(persistent_settings_file_)); // 读取persistent yaml
   if (!reader.error())
   {
     QString last_config_dir, last_image_dir;

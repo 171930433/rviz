@@ -154,7 +154,7 @@ public:
     record.name_ = name;
     record.description_ = description;
     record.factory_function_ = factory_function;
-    built_ins_[record.class_id_] = record;
+    built_ins_[record.class_id_] = record;  // 缓存该 pannel创建的所有信息，但尚未执行
   }
 
 protected:

@@ -134,6 +134,7 @@ bool VisualizerApp::init(int argc, char** argv)
     std::string display_config, fixed_frame, splash_path, help_path;
     int force_gl_version = 0;
 
+    // 1. --h时显示的所有信息，带po::value参数的表示这个配置项可以读入一个参数
     po::options_description options;
     options.add_options() // clang-format off
       ("help,h", "Produce this help message")
@@ -156,9 +157,11 @@ bool VisualizerApp::init(int argc, char** argv)
     po::variables_map vm;
     try
     {
+      // 2 后续使用parse_command_line讲参数读取到po::variables_map vm中
       po::store(po::parse_command_line(argc, argv, options), vm);
       po::notify(vm);
 
+      // 3 使用vm.count("help") 表示是否读入该参数
       if (vm.count("help"))
       {
         std::cout << "rviz command line options:\n" << options;
@@ -179,6 +182,7 @@ bool VisualizerApp::init(int argc, char** argv)
       return false;
     }
 
+    // roscore是否存在
     if (!ros::master::check())
     {
       WaitForMasterDialog dialog;
@@ -201,7 +205,7 @@ bool VisualizerApp::init(int argc, char** argv)
     if (vm.count("no-stereo"))
       RenderSystem::forceNoStereo();
 
-    frame_ = new VisualizationFrame();
+    frame_ = new VisualizationFrame();  // 默认构造，创建了窗口的状态栏部分
     frame_->setApp(this->app_);
     if (!help_path.empty())
     {
@@ -211,6 +215,7 @@ bool VisualizerApp::init(int argc, char** argv)
     if (vm.count("splash-screen"))
       frame_->setSplashPath(QString::fromStdString(splash_path));
 
+    // 
     frame_->initialize(QString::fromStdString(display_config));
 
     if (!fixed_frame.empty())

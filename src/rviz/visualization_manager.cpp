@@ -135,15 +135,15 @@ VisualizationManager::VisualizationManager(RenderPanel* render_panel, WindowMana
 VisualizationManager::VisualizationManager(RenderPanel* render_panel,
                                            WindowManagerInterface* wm,
                                            boost::shared_ptr<tf::TransformListener> tf)
-  : ogre_root_(Ogre::Root::getSingletonPtr())
+  : ogre_root_(Ogre::Root::getSingletonPtr()) // orge的根节点
   , update_timer_(nullptr)
   , shutting_down_(false)
-  , render_panel_(render_panel)
+  , render_panel_(render_panel)           // 主绘制窗口
   , time_update_timer_(0.0f)
   , frame_update_timer_(0.0f)
   , render_requested_(1)
   , frame_count_(0)
-  , window_manager_(wm)
+  , window_manager_(wm)         // 可以访问qmainwindow
   , private_(new VisualizationManagerPrivate)
 {
   // visibility_bit_allocator_ is listed after default_visibility_bit_ (and thus initialized later be
@@ -155,7 +155,7 @@ VisualizationManager::VisualizationManager(RenderPanel* render_panel,
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-  frame_manager_ = new FrameManager(tf);
+  frame_manager_ = new FrameManager(tf);  // tf消息管理
 
 #ifndef _WIN32
 #pragma GCC diagnostic pop
@@ -165,7 +165,7 @@ VisualizationManager::VisualizationManager(RenderPanel* render_panel,
 
   private_->threaded_nh_.setCallbackQueue(&private_->threaded_queue_);
 
-  scene_manager_ = ogre_root_->createSceneManager(Ogre::ST_GENERIC);
+  scene_manager_ = ogre_root_->createSceneManager(Ogre::ST_GENERIC);  // scene_manager_ 是ogre的场景管理器
 
   rviz::RenderSystem::RenderSystem::get()->prepareOverlays(scene_manager_);
 
@@ -174,20 +174,25 @@ VisualizationManager::VisualizationManager(RenderPanel* render_panel,
   directional_light_->setDirection(Ogre::Vector3(-1, 0, -1));
   directional_light_->setDiffuseColour(Ogre::ColourValue(1.0f, 1.0f, 1.0f));
 
+  // display的根节点
   root_display_group_ = new DisplayGroup();
   root_display_group_->setName("root");
   display_property_tree_model_ = new PropertyTreeModel(root_display_group_);
   display_property_tree_model_->setDragDropClass("display");
   connect(display_property_tree_model_, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
 
+  // 工具栏
   tool_manager_ = new ToolManager(this);
   connect(tool_manager_, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
   connect(tool_manager_, SIGNAL(toolChanged(Tool*)), this, SLOT(onToolChanged(Tool*)));
 
+  // 相机view管理类
   view_manager_ = new ViewManager(this);
   view_manager_->setRenderPanel(render_panel_);
   connect(view_manager_, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
 
+
+  // 为root_display_group_ 添加global options配置
   IconizedProperty* ip = new IconizedProperty("Global Options", QVariant(), "", root_display_group_);
   ip->setIcon(loadPixmap("package://rviz/icons/options.png"));
   global_options_ = ip;
@@ -222,6 +227,7 @@ VisualizationManager::VisualizationManager(RenderPanel* render_panel,
 
   selection_manager_ = new SelectionManager(this);
 
+  // 按照fps_property_设定的帧率，调用onUpdate函数
   update_timer_ = new QTimer;
   connect(update_timer_, SIGNAL(timeout()), this, SLOT(onUpdate()));
 
@@ -359,9 +365,9 @@ void VisualizationManager::onUpdate()
 
   frame_manager_->update();
 
-  root_display_group_->update(wall_dt, ros_dt);
+  root_display_group_->update(wall_dt, ros_dt);   // 每一个display成员，顺序更新
 
-  view_manager_->update(wall_dt, ros_dt);
+  view_manager_->update(wall_dt, ros_dt);   // 当前视角相机view更新
 
   time_update_timer_ += wall_dt;
 
@@ -381,7 +387,7 @@ void VisualizationManager::onUpdate()
     updateFrames();
   }
 
-  selection_manager_->update();
+  selection_manager_->update(); // 选择管理器更新
 
   if (tool_manager_->getCurrentTool())
   {
@@ -655,7 +661,7 @@ void VisualizationManager::updateFixedFrame()
   QString frame = fixed_frame_property_->getFrame();
 
   frame_manager_->setFixedFrame(frame.toStdString());
-  root_display_group_->setFixedFrame(frame);
+  root_display_group_->setFixedFrame(frame);  // 遍历children，设置fixed_frame
 }
 
 QString VisualizationManager::getFixedFrame() const

@@ -65,6 +65,7 @@ static Panel* newViewsPanel()
 
 PanelFactory::PanelFactory() : PluginlibFactory<Panel>("rviz", "rviz::Panel")
 {
+  // 做好几个pannel创建的信息
   addBuiltInClass("rviz", "Displays", "Show and edit the list of Displays", &newDisplaysPanel);
   addBuiltInClass("rviz", "Help", "Show the key and mouse bindings", &newHelpPanel);
   addBuiltInClass("rviz", "Selection", "Show properties of selected objects", &newSelectionPanel);
