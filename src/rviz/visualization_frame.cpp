@@ -293,7 +293,7 @@ void VisualizationFrame::initialize(const QString& display_config_file)
   central_layout->setSpacing(0);
   central_layout->setMargin(0);
 
-  render_panel_ = new RenderPanel(central_widget);  // render_panel_ 为 central_widget
+  render_panel_ = new RenderPanel(central_widget);  // render_panel_ 为 central_widget的3d绘制部分
 
   hide_left_dock_button_ = new QToolButton();
   hide_left_dock_button_->setContentsMargins(0, 0, 0, 0);
@@ -393,8 +393,8 @@ void VisualizationFrame::initialize(const QString& display_config_file)
   initialized_ = true;
   Q_EMIT statusUpdate("RViz is ready.");
 
-  connect(manager_, SIGNAL(preUpdate()), this, SLOT(updateFps()));
-  connect(manager_, SIGNAL(statusUpdate(const QString&)), this, SIGNAL(statusUpdate(const QString&)));
+  connect(manager_, SIGNAL(preUpdate()), this, SLOT(updateFps()));  // fps计算
+  connect(manager_, SIGNAL(statusUpdate(const QString&)), this, SIGNAL(statusUpdate(const QString&)));  // 状态栏显示
 }
 
 void VisualizationFrame::initConfigs()
@@ -774,7 +774,7 @@ bool VisualizationFrame::loadDisplayConfigHelper(const std::string& full_path)
   setWindowModified(false);
   loading_ = true;
 
-  std::unique_ptr<LoadingDialog> dialog;
+  std::unique_ptr<LoadingDialog> dialog;  // 载入窗口显示
   if (initialized_)
   {
     dialog.reset(new LoadingDialog(this));
@@ -1021,7 +1021,7 @@ bool VisualizationFrame::prepareToExit()
     return true;
   }
 
-  savePersistentSettings();
+  savePersistentSettings(); // 写出全局配置
 
   if (isWindowModified() && preferences_->prompt_save_on_exit)
   {
@@ -1418,12 +1418,12 @@ QDockWidget* VisualizationFrame::addPanelByName(const QString& name,
   record.dock = addPane(name, panel, area, floating);
   record.panel = panel;
   record.name = name;
-  record.delete_action = delete_view_menu_->addAction(name, this, SLOT(onDeletePanel()));
-  connect(record.dock, &QObject::destroyed, this, &VisualizationFrame::onPanelDeleted);
-  custom_panels_.append(record);
+  record.delete_action = delete_view_menu_->addAction(name, this, SLOT(onDeletePanel())); // 增加待删除菜单，删除pannel对应资源,触发 destroyed 消息
+  connect(record.dock, &QObject::destroyed, this, &VisualizationFrame::onPanelDeleted);   // 关闭后清楚buffer对象，和相应菜单
+  custom_panels_.append(record);    // custom_panels_ 存储所有pannels
   delete_view_menu_->setEnabled(true);
 
-  record.panel->initialize(manager_);
+  record.panel->initialize(manager_); //! panel 获取 manager_ 指针
 
   record.dock->setIcon(panel_factory_->getIcon(class_id));
 

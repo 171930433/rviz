@@ -51,6 +51,7 @@ namespace rviz
 {
 DisplaysPanel::DisplaysPanel(QWidget* parent) : Panel(parent)
 {
+  // 带有帮助信息的tree
   tree_with_help_ = new PropertyTreeWithHelp;
   property_grid_ = tree_with_help_->getTree();
 
@@ -70,6 +71,7 @@ DisplaysPanel::DisplaysPanel(QWidget* parent) : Panel(parent)
   rename_button_->setToolTip("Rename a display, Ctrl+R");
   rename_button_->setEnabled(false);
 
+  // 水平的四个按钮
   QHBoxLayout* button_layout = new QHBoxLayout;
   button_layout->addWidget(add_button);
   button_layout->addWidget(duplicate_button_);

@@ -61,7 +61,7 @@ void PropertySelectionModel::setCurrentIndex(const QModelIndex& index,
 PropertyTreeWidget::PropertyTreeWidget(QWidget* parent)
   : QTreeView(parent), model_(nullptr), splitter_handle_(new SplitterHandle(this))
 {
-  setItemDelegateForColumn(1, new PropertyTreeDelegate(this));
+  setItemDelegateForColumn(1, new PropertyTreeDelegate(this));  // 定制渲染方式
   setDropIndicatorShown(true);
   setUniformRowHeights(true);
   setHeaderHidden(true);
@@ -73,7 +73,7 @@ PropertyTreeWidget::PropertyTreeWidget(QWidget* parent)
   setEditTriggers(QAbstractItemView::AllEditTriggers);
 
   QTimer* timer = new QTimer(this);
-  connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+  connect(timer, SIGNAL(timeout()), this, SLOT(update()));  // 主动10hz更新
   timer->start(100);
 }
 

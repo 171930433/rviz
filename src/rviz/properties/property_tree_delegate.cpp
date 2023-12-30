@@ -61,6 +61,7 @@ QWidget* PropertyTreeDelegate::createEditor(QWidget* parent,
     return nullptr;
   }
 
+  // 如果prop指定了的具体的editor,则调用property自己的
   if (QWidget* editor = prop->createEditor(parent, option))
   {
     return editor;

@@ -56,6 +56,7 @@ PropertyTreeWithHelp::PropertyTreeWithHelp(QWidget* parent) : QSplitter(parent)
   _sizes.push_back(1);
   setSizes(_sizes);
 
+  // 当前选中的property改变时,出发help信息调整
   connect(property_tree_, SIGNAL(currentPropertyChanged(const Property*)), this,
           SLOT(showHelpForProperty(const Property*)));
 }
