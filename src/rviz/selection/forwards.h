@@ -56,9 +56,9 @@ struct Picked
   {
   }
 
-  CollObjectHandle handle;
+  CollObjectHandle handle;  // !被选中的 具体handler句柄
   int pixel_count;
-  S_uint64 extra_handles;
+  S_uint64 extra_handles;   // !二次选中的结果
 };
 typedef boost::unordered_map<CollObjectHandle, Picked> M_Picked;
 

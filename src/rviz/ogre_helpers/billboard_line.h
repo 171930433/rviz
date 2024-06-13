@@ -39,6 +39,7 @@
 #include <OgreColourValue.h>
 #include <OgreMaterial.h>
 #include <OgreSharedPtr.h>
+#include <OgreMovableObject.h>
 
 namespace Ogre
 {
@@ -55,7 +56,7 @@ namespace rviz
  * \class BillboardLine
  * \brief An object that displays a multi-segment line strip rendered as billboards
  */
-class BillboardLine : public Object
+class BillboardLine : public Object, public Ogre::MovableObject
 {
 public:
   /**
@@ -132,6 +133,26 @@ private:
 
   uint32_t current_chain_;
   uint32_t elements_in_current_chain_;
+
+
+public:
+  void _updateRenderQueue(Ogre::RenderQueue* queue) override;
+  void _notifyCurrentCamera(Ogre::Camera* camera) override;
+  void _notifyAttached(Ogre::Node* parent, bool isTagPoint = false) override;
+#if (OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 6)
+  void visitRenderables(Ogre::Renderable::Visitor* visitor, bool debugRenderables) override;
+#endif
+  const Ogre::AxisAlignedBox& getBoundingBox() const override;
+  float getBoundingRadius() const override;
+  // static constexpr Ogre::String const sm_Type = "BillboardLine"; ///< The "renderable type" used by Ogre
+
+  const Ogre::String& getMovableType() const override
+  {
+    return sm_Type;
+  }
+  Ogre::AxisAlignedBox bounding_box_; ///< The bounding box of this point cloud
+  float bounding_radius_;             ///< The bounding radius of this point cloud
+  static Ogre::String sm_Type; ///< The "renderable type" used by Ogre
 };
 
 } // namespace rviz

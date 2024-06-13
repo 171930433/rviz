@@ -72,6 +72,8 @@
 #include <vector>
 
 
+#include <QDebug>
+
 namespace rviz
 {
 SelectionManager::SelectionManager(VisualizationManager* manager)
@@ -104,9 +106,9 @@ SelectionManager::~SelectionManager()
 
   for (uint32_t i = 0; i < s_num_render_textures_; ++i)
   {
-    delete[](uint8_t*) pixel_boxes_[i].data;
+    delete[] (uint8_t*)pixel_boxes_[i].data;
   }
-  delete[](uint8_t*) depth_pixel_box_.data;
+  delete[] (uint8_t*)depth_pixel_box_.data;
 
   vis_manager_->getSceneManager()->destroyCamera(camera_);
 
@@ -591,6 +593,9 @@ void SelectionManager::unpackColors(Ogre::PixelBox& box, V_CollObject& pixels)
       uint32_t pos = (x + y * w) * size;
       uint32_t pix_val = 0;
       memcpy((uint8_t*)&pix_val, (uint8_t*)box.data + pos, size);
+
+      qDebug() << " SelectionManager::unpackColors pix_val = " << pix_val;
+
       pixels.push_back(colorToHandle(box.format, pix_val));
     }
   }
@@ -774,7 +779,7 @@ bool SelectionManager::render(Ogre::Viewport* viewport,
   int size = Ogre::PixelUtil::getMemorySize(render_w, render_h, 1, format);
   uint8_t* data = new uint8_t[size];
 
-  delete[](uint8_t*) dst_box.data;
+  delete[] (uint8_t*)dst_box.data;
   dst_box = Ogre::PixelBox(render_w, render_h, 1, format, data);
 
   pixel_buffer->blitToMemory(dst_box, dst_box);
@@ -846,6 +851,9 @@ void SelectionManager::publishDebugImage(const Ogre::PixelBox& pixel_box, const 
   }
 
   pub.publish(msg);
+
+  std::cout<<" pixel_box.format = " << pixel_box.format <<" pub an image " << msg.header.stamp <<" \n";
+  std::cout<<"msg[0] r g b is" << (int)msg.data[0] << " g = " << (int)msg.data[1] <<" b = "<< (int)msg.data[2] <<"\n";
 }
 
 void SelectionManager::renderQueueStarted(uint8_t /*queueGroupId*/,
@@ -869,6 +877,9 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
                             bool single_render_pass)
 {
   boost::recursive_mutex::scoped_lock lock(global_mutex_);
+
+  qDebug() << "-------------------------------------- begin 1 select";
+
 
   bool need_additional_render = false;
 
@@ -907,6 +918,7 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
 
       CollObjectHandle handle = p;
 
+      // !首次根据像素选择得到的handle,二次选择时位置与handle的索引
       handles_by_pixel.push_back(handle);
 
       if (handle == 0)
@@ -916,15 +928,17 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
 
       SelectionHandler* handler = getHandler(handle);
 
+      //! 如果已经选择了该句柄,则pixel计数++,否则添加到results内部,results为所有选择的handler
       if (handler)
       {
         std::pair<M_Picked::iterator, bool> insert_result =
             results.insert(std::make_pair(handle, Picked(handle)));
         if (insert_result.second)
         {
+          // !确认是否需要2次选择
           if (handler->needsAdditionalRenderPass(1) && !single_render_pass)
           {
-            need_additional.insert(handle);
+            need_additional.insert(handle); // !需要2次选择的要素结果
             need_additional_render = true;
           }
         }
@@ -942,6 +956,7 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
   extra_by_pixel.resize(handles_by_pixel.size());
   while (need_additional_render && pass < s_num_render_textures_)
   {
+    qDebug() << "------------------- begin 2 select";
     {
       S_CollObject::iterator need_it = need_additional.begin();
       S_CollObject::iterator need_end = need_additional.end();
@@ -950,11 +965,11 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
         SelectionHandler* handler = getHandler(*need_it);
         ROS_ASSERT(handler);
 
-        handler->preRenderPass(pass);
+        handler->preRenderPass(pass); // preRenderPass 1
       }
     }
 
-    renderAndUnpack(viewport, pass, x1, y1, x2, y2, pixels);
+    renderAndUnpack(viewport, pass, x1, y1, x2, y2, pixels); // 获得2次选择的所有像素
 
     {
       S_CollObject::iterator need_it = need_additional.begin();
@@ -968,6 +983,9 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
       }
     }
 
+    qDebug() << " ------------------- end 2 select pixels.size() = " << pixels.size();
+
+
     int i = 0;
     V_CollObject::iterator pix_it = pixels.begin();
     V_CollObject::iterator pix_end = pixels.end();
@@ -975,17 +993,18 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
     {
       const CollObjectHandle& p = *pix_it;
 
-      CollObjectHandle handle = handles_by_pixel[i];
+      CollObjectHandle handle = handles_by_pixel[i]; // !拿到该像素的handle,与第一次选择一致
 
       if (pass == 1)
       {
         extra_by_pixel[i] = 0;
       }
 
+      // !确认该选择器需要2次筛选
       if (need_additional.find(handle) != need_additional.end())
       {
         CollObjectHandle extra_handle = p;
-        extra_by_pixel[i] |= extra_handle << (32 * (pass - 1));
+        extra_by_pixel[i] |= extra_handle << (32 * (pass - 1)); // !!!!记录选择获得的像素
       }
       else
       {
@@ -1021,7 +1040,7 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
       continue;
     }
 
-    M_Picked::iterator picked_it = results.find(handle);
+    M_Picked::iterator picked_it = results.find(handle); //! 确认2次选中的像素第一次也被选择
     if (picked_it == results.end())
     {
       continue;
@@ -1032,8 +1051,15 @@ void SelectionManager::pick(Ogre::Viewport* viewport,
     if (*pix_2_it)
     {
       picked.extra_handles.insert(*pix_2_it);
+
+      int index = (*pix_2_it & 0xffffffff) - 1;
+
+      qDebug() << " @@@@@@ index " << index <<" selected";
     }
   }
+
+  qDebug() << "-------------------------------------- end 1 select";
+
 }
 
 Ogre::Technique* SelectionManager::handleSchemeNotFound(unsigned short /*scheme_index*/,

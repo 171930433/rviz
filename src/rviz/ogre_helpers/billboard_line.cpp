@@ -72,6 +72,11 @@ BillboardLine::BillboardLine(Ogre::SceneManager* scene_manager, Ogre::SceneNode*
   material_->getTechnique(0)->setLightingEnabled(false);
 
   setNumLines(num_lines_);
+
+  //
+  bounding_box_.setNull();
+  bounding_radius_ = 0.0f;
+
 }
 
 BillboardLine::~BillboardLine()
@@ -232,6 +237,17 @@ void BillboardLine::addPoint(const Ogre::Vector3& point, const Ogre::ColourValue
   e.width = width_;
   e.colour = color;
   chains_[current_chain_]->addChainElement(current_line_ % lines_per_chain_, e);
+
+
+  //
+  bounding_box_.merge(chains_[current_chain_]->getBoundingBox());
+  bounding_radius_ = std::max(bounding_radius_, chains_[current_chain_]->getBoundingRadius());
+
+  if (getParentSceneNode())
+  {
+    getParentSceneNode()->needUpdate();
+  }
+
 }
 
 void BillboardLine::setLineWidth(float width)
@@ -307,5 +323,49 @@ const Ogre::Quaternion& BillboardLine::getOrientation()
 {
   return scene_node_->getOrientation();
 }
+
+
+void BillboardLine::_notifyCurrentCamera(Ogre::Camera* camera)
+{
+  MovableObject::_notifyCurrentCamera(camera);
+}
+
+void BillboardLine::_updateRenderQueue(Ogre::RenderQueue* queue)
+{
+  // V_PointCloudRenderable::iterator it = renderables_.begin();
+  // V_PointCloudRenderable::iterator end = renderables_.end();
+  // for (; it != end; ++it)
+  // {
+  //   queue->addRenderable((*it).get());
+  // }
+
+  for (auto const& chain : chains_)
+  {
+    queue->addRenderable(chain);
+  }
+
+  std::cout <<" BillboardLine::_updateRenderQueue called\n";
+}
+
+void BillboardLine::_notifyAttached(Ogre::Node* parent, bool isTagPoint)
+{
+  MovableObject::_notifyAttached(parent, isTagPoint);
+}
+
+const Ogre::AxisAlignedBox& BillboardLine::getBoundingBox() const
+{
+  return bounding_box_;
+}
+
+float BillboardLine::getBoundingRadius() const
+{
+  return bounding_radius_;
+}
+#if (OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 6)
+void BillboardLine::visitRenderables(Ogre::Renderable::Visitor* /*visitor*/, bool /*debugRenderables*/)
+{
+}
+#endif
+Ogre::String BillboardLine::sm_Type = "BillboardLine123";
 
 } // namespace rviz

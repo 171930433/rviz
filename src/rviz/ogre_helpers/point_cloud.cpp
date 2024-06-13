@@ -665,6 +665,8 @@ void PointCloud::_updateRenderQueue(Ogre::RenderQueue* queue)
   {
     queue->addRenderable((*it).get());
   }
+  std::cout <<" PointCloud::_updateRenderQueue called\n";
+
 }
 
 void PointCloud::_notifyAttached(Ogre::Node* parent, bool isTagPoint)
